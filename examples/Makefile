@@ -26,14 +26,20 @@ ifneq ($V,1)
 Q ?= @
 endif
 
-#DEBUG	= -g -O0
-DEBUG	= -O3
-CC	= gcc
-INCLUDE	= -I/usr/local/include
-CFLAGS	= $(DEBUG) -Wall $(INCLUDE) -Winline -pipe
+DESTDIR?=/usr
+PREFIX?=/local
 
-LDFLAGS	= -L/usr/local/lib
-LDLIBS    = -lwiringPi -lwiringPiDev -lpthread -lm -lcrypt -lrt
+INCLUDE_DIR?=$(DESTDIR)$(PREFIX)/include
+LIB_DIR?=$(DESTDIR)$(PREFIX)/lib
+
+#DEBUG	?= -g -O0
+DEBUG	?= -O3
+CC	?= gcc
+INCLUDE	?= -I$(INCLUDE_DIR)
+CFLAGS	?= $(DEBUG) -Wall $(INCLUDE) -Winline -pipe
+
+LDFLAGS	?= -L$(LIB_DIR)
+LDLIBS    ?= -lwiringPi -lwiringPiDev -lpthread -lm -lcrypt -lrt
 
 # Should not alter anything below this line
 ###############################################################################

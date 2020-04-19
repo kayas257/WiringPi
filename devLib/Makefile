@@ -22,6 +22,7 @@
 #################################################################################
 
 VERSION=$(shell cat ../VERSION)
+DYN_VERS_MAJ=$(word 1,$(subst ., ,$(VERSION)))
 DESTDIR?=/usr
 PREFIX?=/local
 
@@ -31,15 +32,19 @@ ifneq ($V,1)
 Q ?= @
 endif
 
-STATIC=libwiringPiDev.a
-DYNAMIC=libwiringPiDev.so.$(VERSION)
+INCLUDE_DIR?=$(DESTDIR)$(PREFIX)/include
+LIB_DIR?=$(DESTDIR)$(PREFIX)/lib
 
-#DEBUG	= -g -O0
-DEBUG	= -O2
-CC	= gcc
-INCLUDE	= -I.
-DEFS	= -D_GNU_SOURCE
-CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Winline $(INCLUDE) -pipe -fPIC
+BASE_NAME=libwiringPiDev
+STATIC=$(BASE_NAME).a
+DYNAMIC=$(BASE_NAME).so.$(VERSION)
+
+#DEBUG ?= -g -O0
+DEBUG	?= -O2
+CC	?= gcc
+INCLUDE	?= -I.
+DEFS	?= -D_GNU_SOURCE
+CFLAGS	?= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Winline $(INCLUDE) -pipe -fPIC
 
 LIBS    =
 
@@ -68,16 +73,16 @@ $(STATIC):	$(OBJ)
 
 $(DYNAMIC):	$(OBJ)
 	$Q echo "[Link (Dynamic)]"
-	$Q $(CC) -shared -Wl,-soname,libwiringPiDev.so$(WIRINGPI_SONAME_SUFFIX) -o libwiringPiDev.so.$(VERSION) -lpthread $(OBJ)
+	$Q $(CC) -shared $(LDFLAGS) -Wl,-soname,$(BASE_NAME).so.$(DYN_VERS_MAJ) -o $(BASE_NAME).so -lpthread $(OBJ)
 
 .c.o:
 	$Q echo [Compile] $<
-	$Q $(CC) -c $(CFLAGS) $< -o $@
+	$Q $(CC) -c $(CFLAGS) -fPIC $< -o $@
 
 .PHONY:	clean
 clean:
 	$Q echo "[Clean]"
-	$Q rm -f $(OBJ) $(OBJ_I2C) *~ core tags Makefile.bak libwiringPiDev.*
+	$Q rm -f $(OBJ) $(OBJ_I2C) *~ core tags Makefile.bak $(BASE_NAME).so* $(BASE_NAME).a
 
 .PHONY:	tags
 tags:	$(SRC)
@@ -88,22 +93,22 @@ tags:	$(SRC)
 .PHONY:	install
 install:	$(DYNAMIC)
 	$Q echo "[Install Headers]"
-	$Q install -m 0755 -d						$(DESTDIR)$(PREFIX)/include
-	$Q install -m 0644 $(HEADERS)					$(DESTDIR)$(PREFIX)/include
+	$Q install -m 0755 -d						$(INCLUDE_DIR)
+	$Q install -m 0644 $(HEADERS)					$(INCLUDE_DIR)
 	$Q echo "[Install Dynamic Lib]"
-	$Q install -m 0755 -d						$(DESTDIR)$(PREFIX)/lib
-	$Q install -m 0755 libwiringPiDev.so.$(VERSION)			$(DESTDIR)$(PREFIX)/lib/libwiringPiDev.so.$(VERSION)
-	$Q ln -sf $(DESTDIR)$(PREFIX)/lib/libwiringPiDev.so.$(VERSION)	$(DESTDIR)/lib/libwiringPiDev.so
-	$Q $(LDCONFIG)
+	$Q install -m 0755 -d						$(LIB_DIR)
+	$Q install -m 0755 $(BASE_NAME).so				$(LIB_DIR)/$(DYNAMIC)
+	$Q ln -sf $(DYNAMIC)						$(LIB_DIR)/$(BASE_NAME).so
+	$Q ln -sf $(DYNAMIC)						$(LIB_DIR)/$(BASE_NAME).so.$(DYN_VERS_MAJ)
 
 .PHONY:	install-static
 install-static:	$(STATIC)
 	$Q echo "[Install Headers]"
-	$Q install -m 0755 -d						$(DESTDIR)$(PREFIX)/include
-	$Q install -m 0644 $(HEADERS)					$(DESTDIR)$(PREFIX)/include
+	$Q install -m 0755 -d						$(INCLUDE_DIR)
+	$Q install -m 0644 $(HEADERS)					$(INCLUDE_DIR)
 	$Q echo "[Install Static Lib]"
-	$Q install -m 0755 -d						$(DESTDIR)$(PREFIX)/lib
-	$Q install -m 0755 libwiringPiDev.a				$(DESTDIR)$(PREFIX)/lib
+	$Q install -m 0755 -d						$(LIB_DIR)
+	$Q install -m 0755 $(STATIC)					$(LIB_DIR)
 
 .PHONY:	install-deb
 install-deb:	$(DYNAMIC)
@@ -118,9 +123,11 @@ install-deb:	$(DYNAMIC)
 .PHONY:	uninstall
 uninstall:
 	$Q echo "[UnInstall]"
-	$Q cd $(DESTDIR)$(PREFIX)/include/ && rm -f $(HEADERS)
-	$Q cd $(DESTDIR)$(PREFIX)/lib/     && rm -f libwiringPiDev.*
-	$Q $(LDCONFIG)
+	$Q cd $(INCLUDE_DIR) && rm -f $(HEADERS)
+	$Q rm -f $(LIB_DIR)/$(STATIC)
+	$Q rm -f $(LIB_DIR)/$(DYNAMIC)
+	$Q rm -f $(LIB_DIR)/$(BASE_NAME).so
+	$Q rm -f $(LIB_DIR)/$(BASE_NAME).so.$(DYN_VERS_MAJ)
 
 
 .PHONY:	depend
